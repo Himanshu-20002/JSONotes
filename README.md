@@ -20,6 +20,7 @@
   - **Phase 4: Layout Strategy Architecture & Code Focus**: Reusable strategy contract (`LayoutStrategy`) featuring `Balanced` and `Code Focus` layouts (prioritizing $60\%$ code region / $40\%$ explanation columns).
   - **Phase 5: Cheat Sheet & Concept Grid Strategies**: Added `Cheat Sheet` (compact 3-column revision dashboard) and `Concept Grid` (structured 2-column card grid with local row alignment).
   - **Phase 6: Intelligent Layout Recommendation & Scoring Engine**: Offline, deterministic candidate evaluator scoring strategies by content fit ($45\%$), geometry fit ($35\%$), and readability ($20\%$).
+  - **Phase 7: Recommendation UX & User Layout Preferences**: 2-stage Analyze-Before-Generate import workflow with preference-aware re-ranking (`density`, `priority`, `structure`) and explicit candidate selection.
 - ⚡ **Structured Content Import**: Import hand-written JSON or Markdown payloads without needing explicit $x, y$ coordinates.
 - 📤 **Multi-Format High-Res Exports**: Export wallpapers in **PNG**, **JPEG**, **WebP**, **SVG**, or save projects losslessly as `.json`.
 - ⌨️ **UX & Keyboard Productivity**: Full Undo (`Ctrl+Z`), Redo (`Ctrl+Y`), duplicate (`Ctrl+D`), delete (`Del`), layer locking (`Ctrl+L`), and multi-axis transforms.
@@ -53,7 +54,7 @@
                                                   │
                                                   ▼
                                  ┌─────────────────────────────────┐
-                                 │        recommendLayout()        │
+                                 │      recommendLayout(opts)      │
                                  │ (lib/engine/recommendation/...) │
                                  └─────────────────────────────────┘
                                       /    │       │    \
@@ -75,6 +76,8 @@
                                  │      RecommendationResult       │
                                  │ (Ranked Candidates & Confidence)│
                                  └─────────────────────────────────┘
+                                                  │
+                                     (User Customizes / Selects)
                                                   │
                                                   ▼
                                  ┌─────────────────────────────────┐
@@ -112,7 +115,7 @@ lib/
 │   │   ├── measure-block.ts      # Semantic block router & overflow warning estimator
 │   │   ├── measure-code.ts       # Code line numbers & line wrapping estimator
 │   │   ├── measure-list.ts       # List item height & gap estimator
-│   │   ├── measure-text.ts       # Character-width text wrapping model
+   │   ├── measure-text.ts       # Character-width text wrapping model
 │   │   ├── types.ts              # Sizing constraints & warning types
 │   │   └── index.ts              # Barrel containing detectCanvasOverflow()
 │   ├── layout/                   # Phase 3, 4, 5: 4-Layout Strategy Architecture
@@ -128,13 +131,14 @@ lib/
 │   │   ├── types.ts              # LayoutStrategy, LayoutId, LayoutMetadata, LayoutContext
 │   │   ├── validation.ts         # Pure collision & bounds validation
 │   │   └── index.ts
-│   ├── recommendation/           # Phase 6: Intelligent Recommendation & Scoring Engine
+│   ├── recommendation/           # Phase 6 & 7: Recommendation & Scoring Engine
 │   │   ├── constants.ts          # Score weights & penalty constants
 │   │   ├── content-fit.ts        # Semantic strategy appropriateness evaluator
 │   │   ├── geometry-fit.ts       # Canvas utilization, imbalance, overflow & readability
+│   │   ├── preference-fit.ts     # Evaluates user preferences (density, priority, structure)
 │   │   ├── recommend-layout.ts   # Candidate evaluation, tie-breaking & confidence
 │   │   ├── score-candidate.ts    # Scoring pipeline & penalty application
-│   │   ├── types.ts              # ContentProfile, ScoreBreakdown, RecommendationResult
+│   │   ├── types.ts              # ContentProfile, ScoreBreakdown, LayoutPreferences
 │   │   └── index.ts
 │   ├── compiler.ts               # Pipeline Orchestrator to CanvasElement[]
 │   └── index.ts                  # Public engine barrel API
@@ -213,6 +217,7 @@ Detailed specifications and step-by-step phase walkthroughs are located in the [
 - [docs/architecture.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/architecture.md): Overall application architecture & dataflow documentation.
 - [docs/json-conversion.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/json-conversion.md): Input schema field mappings & grid specs.
 - [docs/recommendation-engine.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/recommendation-engine.md): Recommendation Engine architecture & scoring weights.
+- [docs/recommendation-ui.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/recommendation-ui.md): Recommendation UX workflow & preference model.
 - [docs/phases/phase-01-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-01-walkthrough.md): Phase 1 Semantic Layer implementation.
 - [docs/phases/phase-02-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-02-walkthrough.md): Phase 2 Dynamic Block Measurement Engine.
 - [docs/phases/phase-02.5-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-02.5-walkthrough.md): Phase 2.5 Engine Structure Cleanup.
@@ -220,6 +225,7 @@ Detailed specifications and step-by-step phase walkthroughs are located in the [
 - [docs/phases/phase-04-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-04-walkthrough.md): Phase 4 Layout Strategy Architecture & Code Focus.
 - [docs/phases/phase-05-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-05-walkthrough.md): Phase 5 Cheat Sheet & Concept Grid Strategies.
 - [docs/phases/phase-06-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-06-walkthrough.md): Phase 6 Intelligent Recommendation & Scoring Engine.
+- [docs/phases/phase-07-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-07-walkthrough.md): Phase 7 Recommendation UX & User Layout Preferences.
 
 ---
 

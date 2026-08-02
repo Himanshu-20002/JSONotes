@@ -12,10 +12,17 @@ export interface ContentProfile {
   averageDensity: number
 }
 
+export interface LayoutPreferences {
+  density: "auto" | "compact" | "comfortable"
+  priority: "auto" | "readability" | "fit-more" | "code"
+  structure: "auto" | "balanced" | "grid"
+}
+
 export interface ScoreBreakdown {
   contentFit: number
   geometryFit: number
   readability: number
+  preferenceFit?: number
   overflowPenalty: number
   collisionPenalty: number
   total: number

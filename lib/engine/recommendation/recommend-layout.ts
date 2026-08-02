@@ -1,6 +1,6 @@
 import type { SemanticDocument, ContentAnalysis } from "../semantic/types"
 import { getAvailableLayouts, getLayoutStrategy } from "../layout/registry"
-import type { LayoutCandidateEvaluation, ContentProfile, RecommendationResult, RecommendationReason } from "./types"
+import type { LayoutCandidateEvaluation, ContentProfile, RecommendationResult, RecommendationReason, LayoutPreferences } from "./types"
 import { scoreCandidate } from "./score-candidate"
 
 function buildContentProfile(doc: SemanticDocument, analysis?: ContentAnalysis): ContentProfile {
@@ -38,7 +38,11 @@ function buildContentProfile(doc: SemanticDocument, analysis?: ContentAnalysis):
   }
 }
 
-export function recommendLayout(doc: SemanticDocument, analysis?: ContentAnalysis): RecommendationResult {
+export function recommendLayout(
+  doc: SemanticDocument,
+  analysis?: ContentAnalysis,
+  options?: { preferences?: LayoutPreferences }
+): RecommendationResult {
   const profile = buildContentProfile(doc, analysis)
   const availableLayouts = getAvailableLayouts()
   const candidateEvaluations: LayoutCandidateEvaluation[] = []
@@ -47,27 +51,21 @@ export function recommendLayout(doc: SemanticDocument, analysis?: ContentAnalysi
   for (const meta of availableLayouts) {
     const strategy = getLayoutStrategy(meta.id)
     const layoutResult = strategy.createLayout(doc, { analysis })
-    const candidateEval = scoreCandidate(strategy, layoutResult, profile)
+    const candidateEval = scoreCandidate(strategy, layoutResult, profile, options?.preferences)
     candidateEvaluations.push(candidateEval)
   }
 
   // 2. Deterministic Tie-Breaking & Ranking
   candidateEvaluations.sort((a, b) => {
-    // Score descending
     if (b.score !== a.score) return b.score - a.score
-    // Collisions ascending
     if (a.breakdown.collisionPenalty !== b.breakdown.collisionPenalty)
       return a.breakdown.collisionPenalty - b.breakdown.collisionPenalty
-    // Overflow ascending
     if (a.breakdown.overflowPenalty !== b.breakdown.overflowPenalty)
       return a.breakdown.overflowPenalty - b.breakdown.overflowPenalty
-    // Readability descending
     if (b.breakdown.readability !== a.breakdown.readability)
       return b.breakdown.readability - a.breakdown.readability
-    // Content fit descending
     if (b.breakdown.contentFit !== a.breakdown.contentFit)
       return b.breakdown.contentFit - a.breakdown.contentFit
-    // Stable registry order fallback
     return a.layoutId.localeCompare(b.layoutId)
   })
 
@@ -83,7 +81,6 @@ export function recommendLayout(doc: SemanticDocument, analysis?: ContentAnalysi
     confidence = 95
   }
 
-  // Filter top positive/informative reasons for winner
   const winnerReasons: RecommendationReason[] = winner.reasons.filter((r) => r.impact === "positive").slice(0, 3)
   if (winnerReasons.length === 0) {
     winnerReasons.push({
