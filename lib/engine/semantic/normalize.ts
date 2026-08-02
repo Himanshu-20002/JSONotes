@@ -1,6 +1,7 @@
 import type { StudyNotesContent } from "../../types"
 import type { SemanticBlock, SemanticDocument } from "./types"
 import { uid } from "../../blocks"
+import { discoverSemanticBlocks } from "./discovery/discover-blocks"
 
 function estimateDensity(length: number): "low" | "medium" | "high" {
   if (length > 300) return "high"
@@ -10,9 +11,11 @@ function estimateDensity(length: number): "low" | "medium" | "high" {
 
 export function normalizeContent(input: StudyNotesContent): SemanticDocument {
   const blocks: SemanticBlock[] = []
+  const consumedPaths = new Set<string>()
 
   // 1. Definition -> definition
   if (input.definition) {
+    consumedPaths.add("definition")
     const isObj = typeof input.definition === "object" && input.definition !== null
     const text = isObj ? (input.definition as { text: string }).text || "" : String(input.definition)
     const title = isObj ? (input.definition as { title?: string }).title : "Definition"
@@ -33,6 +36,7 @@ export function normalizeContent(input: StudyNotesContent): SemanticDocument {
 
   // 2. Concepts -> concept
   if (input.concepts && Array.isArray(input.concepts) && input.concepts.length > 0) {
+    consumedPaths.add("concepts")
     const rawItems = input.concepts.map((c) => (typeof c === "string" ? c : c.text || ""))
     const fullText = rawItems.join(" ")
 
@@ -53,6 +57,7 @@ export function normalizeContent(input: StudyNotesContent): SemanticDocument {
 
   // 3. Related -> related
   if (input.related && Array.isArray(input.related) && input.related.length > 0) {
+    consumedPaths.add("related")
     const items = input.related.map((r) => (typeof r === "string" ? r : String(r)))
 
     blocks.push({
@@ -72,6 +77,7 @@ export function normalizeContent(input: StudyNotesContent): SemanticDocument {
 
   // 4. Code -> code
   if (input.code) {
+    consumedPaths.add("code")
     const isObj = typeof input.code === "object" && input.code !== null
     const codeText = isObj ? (input.code as { code: string }).code || "" : String(input.code)
     const language = isObj ? (input.code as { language?: string }).language || "javascript" : "javascript"
@@ -98,6 +104,7 @@ export function normalizeContent(input: StudyNotesContent): SemanticDocument {
 
   // 5. Summary -> summary
   if (input.summary && Array.isArray(input.summary) && input.summary.length > 0) {
+    consumedPaths.add("summary")
     const items = input.summary.map((s) => (typeof s === "string" ? s : s.text || ""))
 
     blocks.push({
@@ -117,6 +124,7 @@ export function normalizeContent(input: StudyNotesContent): SemanticDocument {
 
   // 6. Interview -> interview
   if (input.interview) {
+    consumedPaths.add("interview")
     const isObj = typeof input.interview === "object" && input.interview !== null
     const text = isObj ? (input.interview as { text: string }).text || "" : String(input.interview)
     const title = isObj ? (input.interview as { title?: string }).title : "Interview Tip"
@@ -137,6 +145,7 @@ export function normalizeContent(input: StudyNotesContent): SemanticDocument {
 
   // 7. Warning -> warning
   if (input.warning) {
+    consumedPaths.add("warning")
     const isObj = typeof input.warning === "object" && input.warning !== null
     const text = isObj ? (input.warning as { text: string }).text || "" : String(input.warning)
     const title = isObj ? (input.warning as { title?: string }).title : "Common Pitfall"
@@ -157,6 +166,7 @@ export function normalizeContent(input: StudyNotesContent): SemanticDocument {
 
   // 8. Memory -> memory
   if (input.memory) {
+    consumedPaths.add("memory")
     const isObj = typeof input.memory === "object" && input.memory !== null
     const text = isObj ? (input.memory as { text: string }).text || "" : String(input.memory)
     const title = isObj ? (input.memory as { title?: string }).title : "Memory Trick"
@@ -177,6 +187,7 @@ export function normalizeContent(input: StudyNotesContent): SemanticDocument {
 
   // 9. Notes -> note
   if (input.notes) {
+    consumedPaths.add("notes")
     const text = typeof input.notes === "string" ? input.notes : String(input.notes)
 
     blocks.push({
@@ -193,9 +204,17 @@ export function normalizeContent(input: StudyNotesContent): SemanticDocument {
     })
   }
 
+  if (input.title) consumedPaths.add("title")
+  if (input.subtitle) consumedPaths.add("subtitle")
+  if (input.template) consumedPaths.add("template")
+  if (input.theme) consumedPaths.add("theme")
+
+  // Discover arbitrary unknown fields in JSON payload
+  const discovered = discoverSemanticBlocks(input, consumedPaths)
+
   return {
-    title: input.title,
-    subtitle: input.subtitle,
-    blocks,
+    title: input.title || discovered.title,
+    subtitle: input.subtitle || discovered.subtitle,
+    blocks: [...blocks, ...discovered.blocks],
   }
 }

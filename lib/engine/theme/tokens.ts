@@ -32,6 +32,7 @@ export const VIBRANT_THEME: ThemeTokens = {
     memory: { background: "#831843", foreground: "#fdf2f8", border: "#ec4899", titleColor: "#f9a8d4" }, // pink
     related: { background: "#164e63", foreground: "#ecfeff", border: "#06b6d4", titleColor: "#67e8f9" }, // cyan
     note: { background: "#334155", foreground: "#f8fafc", border: "#64748b", titleColor: "#cbd5e1" }, // slate
+    generic: { background: "#1e293b", foreground: "#f8fafc", border: "#475569", titleColor: "#cbd5e1" },
   },
 }
 
@@ -67,6 +68,7 @@ export const MINIMAL_THEME: ThemeTokens = {
     memory: { background: "#111827", foreground: "#f8fafc", border: "#ec4899", titleColor: "#f472b6" },
     related: { background: "#111827", foreground: "#f8fafc", border: "#06b6d4", titleColor: "#22d3ee" },
     note: { background: "#111827", foreground: "#f8fafc", border: "#475569", titleColor: "#94a3b8" },
+    generic: { background: "#111827", foreground: "#f8fafc", border: "#334155", titleColor: "#94a3b8" },
   },
 }
 
@@ -102,6 +104,7 @@ export const MIDNIGHT_THEME: ThemeTokens = {
     memory: { background: "#280b1b", foreground: "#fff1f2", border: "#db2777", titleColor: "#f472b6" },
     related: { background: "#08252c", foreground: "#ecfeff", border: "#0891b2", titleColor: "#22d3ee" },
     note: { background: "#0f172a", foreground: "#f8fafc", border: "#334155", titleColor: "#94a3b8" },
+    generic: { background: "#0f172a", foreground: "#f8fafc", border: "#1e293b", titleColor: "#94a3b8" },
   },
 }
 
@@ -137,5 +140,6 @@ export const PAPER_THEME: ThemeTokens = {
     memory: { background: "#fdf2f8", foreground: "#831843", border: "#fbcfe8", titleColor: "#be185d" },
     related: { background: "#ecfeff", foreground: "#164e63", border: "#cffaff", titleColor: "#0e7490" },
     note: { background: "#f5f5f4", foreground: "#292524", border: "#e7e5e4", titleColor: "#44403c" },
+    generic: { background: "#f5f5f4", foreground: "#292524", border: "#e7e5e4", titleColor: "#44403c" },
   },
 }

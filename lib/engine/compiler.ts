@@ -47,8 +47,9 @@ function semanticBlockToCanvasElement(block: SemanticBlock, pos: PositionedBlock
       blockType = "memoryTrick"
       break
     case "note":
+    case "generic":
     default:
-      blockType = "sticky"
+      blockType = "definition"
       break
   }
 

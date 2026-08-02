@@ -22,7 +22,8 @@
   - **Phase 6: Intelligent Layout Recommendation & Scoring Engine**: Offline, deterministic candidate evaluator scoring strategies by content fit ($45\%$), geometry fit ($35\%$), and readability ($20\%$).
   - **Phase 7: Recommendation UX & User Layout Preferences**: 2-stage Analyze-Before-Generate import workflow with preference-aware re-ranking (`density`, `priority`, `structure`) and explicit candidate selection.
   - **Phase 8: Visual Style & Theme Engine**: Independent visual theme layer featuring 4 themes (`Vibrant`, `Minimal`, `Midnight`, `Paper`) with **100% geometry invariance** and post-generation switching.
-- ⚡ **Structured Content Import**: Import hand-written JSON or Markdown payloads without needing explicit $x, y$ coordinates.
+  - **Phase 9: Schema-Agnostic Content Discovery Engine**: Offline, deterministic content discovery classifying un-annotated, arbitrary JSON schemas using alias matching, value shape analysis, and code syntax detection.
+- ⚡ **Structured Content Import**: Import hand-written JSON or Markdown payloads without needing explicit $x, y$ coordinates or fixed schema field names.
 - 📤 **Multi-Format High-Res Exports**: Export wallpapers in **PNG**, **JPEG**, **WebP**, **SVG**, or save projects losslessly as `.json`.
 - ⌨️ **UX & Keyboard Productivity**: Full Undo (`Ctrl+Z`), Redo (`Ctrl+Y`), duplicate (`Ctrl+D`), delete (`Del`), layer locking (`Ctrl+L`), and multi-axis transforms.
 
@@ -32,13 +33,13 @@
 
 ```
                                  ┌─────────────────────────────────┐
-                                 │       Input JSON / Markdown     │
+                                 │   Arbitrary Input JSON / MD     │
                                  └─────────────────────────────────┘
                                                   │
                                                   ▼
                                  ┌─────────────────────────────────┐
-                                 │        normalizeContent()       │
-                                 │   (lib/engine/semantic/...)     │
+                                 │   discoverSemanticBlocks()      │
+                                 │  (Schema-Agnostic Discovery)    │
                                  └─────────────────────────────────┘
                                                   │
                                                   ▼
@@ -98,9 +99,20 @@
 ```text
 lib/
 ├── engine/
-│   ├── semantic/                 # Phase 1: Content Normalization & Analysis
+│   ├── semantic/                 # Phase 1 & 9: Semantic Content & Discovery Engine
+│   │   ├── discovery/            # Phase 9: Schema-Agnostic Content Discovery
+│   │   │   ├── aliases.ts        # Semantic alias dictionary
+│   │   │   ├── classify-field.ts # Deterministic field classification scoring
+│   │   │   ├── code-detection.ts # Code syntax detection (JS/TS, Python, SQL, HTML, CSS)
+│   │   │   ├── constants.ts      # Bounded limits (depth=6, max_fields=100)
+│   │   │   ├── discover-blocks.ts# Mappings to SemanticBlock[]
+│   │   │   ├── field-signals.ts  # FieldSignals extractor
+│   │   │   ├── flatten.ts        # Recursive tree flattening & DiscoveredField model
+│   │   │   ├── key-normalizer.ts # Key normalization & humanizer
+│   │   │   ├── types.ts          # DiscoveredField & FieldClassification types
+│   │   │   └── index.ts
 │   │   ├── analyze.ts            # Content heuristics & density analyzer
-│   │   ├── normalize.ts          # Normalizes raw JSON/MD to SemanticDocument
+│   │   ├── normalize.ts          # Fast-path & Discovery normalization pipeline
 │   │   ├── types.ts              # Semantic types (SemanticBlock, SemanticDocument)
 │   │   └── index.ts
 │   ├── measurement/              # Phase 2: Dynamic Block Sizing Engine
@@ -183,29 +195,20 @@ lib/
 
 ---
 
-## 📄 Example Input JSON Format
+## 📄 Example Arbitrary Input JSON
 
 ```json
 {
-  "template": "study-notes-v1",
-  "content": {
-    "title": "React UseEffect Hook",
-    "subtitle": "Synchronization side-effect primitive",
-    "definition": "A React Hook that lets you synchronize a component with an external system.",
-    "concepts": [
-      "Runs after DOM paint",
-      "Cleanup function runs before re-render or unmount"
-    ],
-    "code": {
-      "language": "typescript",
-      "code": "useEffect(() => {\n  const sub = api.subscribe();\n  return () => sub.unsubscribe();\n}, []);"
-    },
-    "summary": [
-      "Always specify dependency array",
-      "Return cleanup functions for subscriptions"
-    ],
-    "warning": "Do not update state unconditionally inside useEffect!"
-  }
+  "topic": "JavaScript Closures",
+  "explanation": "A closure allows a function to retain access to variables from its lexical scope.",
+  "importantPoints": [
+    "Uses lexical scoping",
+    "Outer variables remain available"
+  ],
+  "exampleCode": "const outer = () => { let x = 1; return () => x; };",
+  "thingsToAvoid": [
+    "Retaining unnecessary large objects"
+  ]
 }
 ```
 
@@ -219,6 +222,7 @@ Detailed specifications and step-by-step phase walkthroughs are located in the [
 - [docs/recommendation-engine.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/recommendation-engine.md): Recommendation Engine architecture & scoring weights.
 - [docs/recommendation-ui.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/recommendation-ui.md): Recommendation UX workflow & preference model.
 - [docs/theme-engine.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/theme-engine.md): Visual Style & Theme Engine tokens and architecture.
+- [docs/content-discovery.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/content-discovery.md): Content Discovery Engine pipeline & classification math.
 - [docs/phases/phase-01-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-01-walkthrough.md): Phase 1 Semantic Layer implementation.
 - [docs/phases/phase-02-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-02-walkthrough.md): Phase 2 Dynamic Block Measurement Engine.
 - [docs/phases/phase-02.5-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-02.5-walkthrough.md): Phase 2.5 Engine Structure Cleanup.
@@ -228,6 +232,7 @@ Detailed specifications and step-by-step phase walkthroughs are located in the [
 - [docs/phases/phase-06-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-06-walkthrough.md): Phase 6 Intelligent Recommendation & Scoring Engine.
 - [docs/phases/phase-07-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-07-walkthrough.md): Phase 7 Recommendation UX & User Layout Preferences.
 - [docs/phases/phase-08-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-08-walkthrough.md): Phase 8 Visual Style & Theme Engine.
+- [docs/phases/phase-09-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-09-walkthrough.md): Phase 9 Schema-Agnostic Content Discovery Engine.
 
 ---
 

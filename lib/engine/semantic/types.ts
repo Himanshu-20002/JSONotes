@@ -8,6 +8,7 @@ export type SemanticBlockType =
   | "warning"
   | "memory"
   | "note"
+  | "generic"
 
 export interface SemanticBlock {
   id: string
@@ -19,6 +20,10 @@ export interface SemanticBlock {
   preferredSize: "small" | "medium" | "large" | "wide" | "tall"
   metadata?: {
     sourceField?: string
+    sourcePath?: string
+    inferred?: boolean
+    inferenceConfidence?: number
+    inferenceReasons?: string[]
     language?: string
     itemCount?: number
     codeLines?: number
