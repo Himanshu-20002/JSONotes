@@ -13,11 +13,12 @@
 ## ✨ Features
 
 - 🎨 **Freeform Visual Canvas**: Interactive 2560×1440 resolution canvas with pan, zoom, grid snapping, and element layering.
-- 🧠 **Multi-Phase Semantic & Layout Engine**:
+- 🧠 **Multi-Phase Semantic & 4-Layout Engine**:
   - **Phase 1: Semantic Content Layer**: Decouples content understanding from canvas rendering into an intermediate `SemanticDocument`.
   - **Phase 2: Dynamic Block Measurement Engine**: Computes exact card height requirements using text-wrapping, font metrics, line counts, and padding calculations.
   - **Phase 3: Intelligent Balanced Layout Strategy**: Dynamic 1–3 column grid with multi-column feature block spanning ($1482\text{px}$) and collision detection.
   - **Phase 4: Layout Strategy Architecture & Code Focus**: Reusable strategy contract (`LayoutStrategy`) featuring `Balanced` and `Code Focus` layouts (prioritizing $60\%$ code region / $40\%$ explanation columns).
+  - **Phase 5: Cheat Sheet & Concept Grid Strategies**: Added `Cheat Sheet` (compact 3-column revision dashboard) and `Concept Grid` (structured 2-column card grid with local row alignment).
 - ⚡ **Structured Content Import**: Import hand-written JSON or Markdown payloads without needing explicit $x, y$ coordinates.
 - 📤 **Multi-Format High-Res Exports**: Export wallpapers in **PNG**, **JPEG**, **WebP**, **SVG**, or save projects losslessly as `.json`.
 - ⌨️ **UX & Keyboard Productivity**: Full Undo (`Ctrl+Z`), Redo (`Ctrl+Y`), duplicate (`Ctrl+D`), delete (`Del`), layer locking (`Ctrl+L`), and multi-axis transforms.
@@ -54,15 +55,15 @@
                                  │       getLayoutStrategy()       │
                                  │    (lib/engine/layout/...)      │
                                  └─────────────────────────────────┘
-                                         /                 \
-                                        /                   \
-                                       ▼                     ▼
-                            ┌───────────────────┐   ┌───────────────────┐
-                            │ Balanced Strategy │   │Code Focus Strategy│
-                            └───────────────────┘   └───────────────────┘
-                                       \                     /
-                                        \                   /
-                                         ▼                 ▼
+                                      /    │       │    \
+                                     /     │       │     \
+                                    v      v       v      v
+                              ┌────────┐┌──────┐┌─────┐┌────────┐
+                              │Balanced││CodeFoc││Cheat││ConceptG│
+                              └────────┘└──────┘└─────┘└────────┘
+                                     \     │       │     /
+                                      \    │       │    /
+                                       v   v       v   v
                                  ┌─────────────────────────────────┐
                                  │          measureBlock()         │
                                  │  (Dynamic Width Height Sizing)  │
@@ -113,15 +114,17 @@ lib/
 │   │   ├── measure-text.ts       # Character-width text wrapping model
 │   │   ├── types.ts              # Sizing constraints & warning types
 │   │   └── index.ts              # Barrel containing detectCanvasOverflow()
-│   ├── layout/                   # Phase 3 & 4: Reusable Layout Strategy Architecture
+│   ├── layout/                   # Phase 3, 4, 5: 4-Layout Strategy Architecture
 │   │   ├── strategies/
 │   │   │   ├── balanced.ts       # Dynamic 1–3 column grid with multi-column spans
 │   │   │   ├── code-focus.ts     # 60/40 dominant code region layout
+│   │   │   ├── cheat-sheet.ts    # Compact 3-column revision dashboard
+│   │   │   ├── concept-grid.ts   # Structured 2-column knowledge card grid
 │   │   │   └── index.ts
 │   │   ├── constants.ts          # Canvas geometry & margin constants
 │   │   ├── metrics.ts            # Area ratio, used height, column imbalance
-│   │   ├── registry.ts           # Central strategy registry & getLayoutStrategy()
-│   │   ├── types.ts              # LayoutStrategy, LayoutMetadata, LayoutContext
+│   │   ├── registry.ts           # Strategy registry supporting 4 layout strategies
+│   │   ├── types.ts              # LayoutStrategy, LayoutId, LayoutMetadata, LayoutContext
 │   │   ├── validation.ts         # Pure collision & bounds validation
 │   │   └── index.ts
 │   ├── compiler.ts               # Pipeline Orchestrator to CanvasElement[]
@@ -205,6 +208,7 @@ Detailed specifications and step-by-step phase walkthroughs are located in the [
 - [docs/phases/phase-02.5-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-02.5-walkthrough.md): Phase 2.5 Engine Structure Cleanup.
 - [docs/phases/phase-03-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-03-walkthrough.md): Phase 3 Intelligent Balanced Layout Engine.
 - [docs/phases/phase-04-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-04-walkthrough.md): Phase 4 Layout Strategy Architecture & Code Focus.
+- [docs/phases/phase-05-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-05-walkthrough.md): Phase 5 Cheat Sheet & Concept Grid Strategies.
 
 ---
 

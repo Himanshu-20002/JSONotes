@@ -1,6 +1,6 @@
 import type { ContentAnalysis, SemanticDocument } from "../semantic/types"
 
-export type LayoutId = "balanced" | "code-focus"
+export type LayoutId = "balanced" | "code-focus" | "cheat-sheet" | "concept-grid"
 
 export interface LayoutRect {
   x: number
