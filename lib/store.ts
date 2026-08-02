@@ -112,6 +112,7 @@ interface EditorState {
   setBackground: (bg: string) => void
   setColorForSelected: (color: ColorKey) => void
   setTemplate: (templateId: string) => void
+  setThemeId: (themeId: string) => void
 
   // project & JSON engine
   newProject: () => void
@@ -382,6 +383,26 @@ export const useEditor = create<EditorState>()(
             template: templateId,
           },
         })),
+
+      setThemeId: (themeId) =>
+        set((s) => {
+          const themeObj = (require("./engine/theme").getTheme as any)(themeId)
+          const updatedElements = (require("./engine/theme").applyThemeToElements as any)(
+            s.project.elements,
+            themeId,
+            true
+          )
+          return {
+            past: [...s.past, JSON.parse(JSON.stringify(s.project))].slice(-50),
+            future: [],
+            project: {
+              ...s.project,
+              themeId,
+              background: themeObj?.canvas?.background || s.project.background,
+              elements: updatedElements,
+            },
+          }
+        }),
 
       newProject: () => set({ project: emptyProject(), selectedIds: [], editingId: null, past: [], future: [] }),
       renameProject: (name) => set((s) => ({ project: { ...s.project, name } })),

@@ -110,6 +110,20 @@ export function Toolbar({
             <option value="custom" className="bg-popover text-popover-foreground">Custom Layout</option>
           </select>
         </div>
+
+        <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/30 p-0.5">
+          <span className="ml-1.5 text-xs">🎨</span>
+          <select
+            value={project.themeId || "vibrant"}
+            onChange={(e) => useEditor.getState().setThemeId(e.target.value)}
+            className="bg-transparent py-1 pr-2 text-xs font-semibold text-foreground outline-none cursor-pointer"
+          >
+            <option value="vibrant" className="bg-popover text-popover-foreground">Vibrant Theme</option>
+            <option value="minimal" className="bg-popover text-popover-foreground">Minimal Theme</option>
+            <option value="midnight" className="bg-popover text-popover-foreground">Midnight Theme</option>
+            <option value="paper" className="bg-popover text-popover-foreground">Paper Theme</option>
+          </select>
+        </div>
       </div>
 
       <div className="flex items-center">

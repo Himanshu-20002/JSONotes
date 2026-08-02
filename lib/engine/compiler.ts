@@ -5,56 +5,50 @@ import { analyzeContent } from "./semantic/analyze"
 import type { SemanticBlock, SemanticDocument } from "./semantic/types"
 import { getLayoutStrategy } from "./layout/registry"
 import type { LayoutId, PositionedBlock } from "./layout/types"
+import type { ThemeId } from "./theme/types"
+import { resolveSemanticStyle } from "./theme/semantic-style"
+import { applyThemeToElement } from "./theme/apply-theme"
 
 export interface CompileOptions {
   layout?: LayoutId | string
+  theme?: ThemeId | string
 }
 
 /**
- * Internal helper mapping a SemanticBlock & PositionedBlock into a CanvasElement
+ * Internal helper mapping a SemanticBlock & PositionedBlock into a CanvasElement with theme styling
  */
-function semanticBlockToCanvasElement(block: SemanticBlock, pos: PositionedBlock): CanvasElement {
+function semanticBlockToCanvasElement(block: SemanticBlock, pos: PositionedBlock, themeId: ThemeId = "vibrant"): CanvasElement {
   const normType = block.type
-  let color: any = "blue"
   let blockType = "definition"
 
   switch (normType) {
     case "definition":
       blockType = "definition"
-      color = "blue"
       break
     case "concept":
       blockType = "definition"
-      color = "purple"
       break
     case "related":
       blockType = "bulletList"
-      color = "cyan"
       break
     case "code":
       blockType = "code"
-      color = "slate"
       break
     case "summary":
       blockType = "checklist"
-      color = "green"
       break
     case "interview":
       blockType = "interviewTip"
-      color = "yellow"
       break
     case "warning":
       blockType = "warning"
-      color = "red"
       break
     case "memory":
       blockType = "memoryTrick"
-      color = "pink"
       break
     case "note":
     default:
       blockType = "sticky"
-      color = "yellow"
       break
   }
 
@@ -64,48 +58,49 @@ function semanticBlockToCanvasElement(block: SemanticBlock, pos: PositionedBlock
     y: pos.y,
     w: pos.width,
     h: pos.height,
-    color,
     fontSize: normType === "code" ? 16 : 18,
   }
 
+  let element: CanvasElement
+
   if (normType === "code") {
     const codeObj = block.content as { language?: string; code: string }
-    return createElement("code", 0, 0, {
+    element = createElement("code", 0, 0, {
       ...baseProps,
       language: codeObj?.language || "javascript",
       code: typeof codeObj === "object" && codeObj !== null ? codeObj.code : String(block.content),
     })
-  }
-
-  if (normType === "summary" || normType === "related") {
+  } else if (normType === "summary" || normType === "related") {
     const items = Array.isArray(block.content) ? block.content.map(String) : [String(block.content)]
-    return createElement(normType === "summary" ? "checklist" : "bulletList", 0, 0, {
+    element = createElement(normType === "summary" ? "checklist" : "bulletList", 0, 0, {
       ...baseProps,
       title: block.title,
       items: items.map((t, i) => ({ id: uid(`item_${i}`), text: t, checked: false })),
     })
-  }
-
-  if (normType === "concept") {
+  } else if (normType === "concept") {
     const items = Array.isArray(block.content) ? block.content.map(String) : [String(block.content)]
-    return createElement("definition", 0, 0, {
+    element = createElement("definition", 0, 0, {
       ...baseProps,
       title: block.title || "Key Concepts",
       text: `• ${items.join("\n\n• ")}`,
     })
+  } else {
+    element = createElement(blockType as any, 0, 0, {
+      ...baseProps,
+      title: block.title,
+      text: String(block.content),
+    })
   }
 
-  return createElement(blockType as any, 0, 0, {
-    ...baseProps,
-    title: block.title,
-    text: String(block.content),
-  })
+  return applyThemeToElement(element, themeId)
 }
 
 /**
- * Strategy Architecture Compiler (Phase 4 Orchestrator)
+ * Strategy Architecture & Theme Engine Compiler
  */
 export function compileTemplateStudyNotesV1(content: StudyNotesContent, options?: CompileOptions): CanvasElement[] {
+  const selectedTheme = (options?.theme as ThemeId) || "vibrant"
+
   // 1. Normalize input into SemanticDocument
   const semDoc: SemanticDocument = normalizeContent(content)
 
@@ -131,7 +126,6 @@ export function compileTemplateStudyNotesV1(content: StudyNotesContent, options?
         h: 90,
         text: semDoc.title,
         fontSize: 64,
-        color: "blue",
       })
     )
   }
@@ -146,16 +140,15 @@ export function compileTemplateStudyNotesV1(content: StudyNotesContent, options?
         h: 50,
         text: semDoc.subtitle,
         fontSize: 28,
-        color: "slate",
       })
     )
   }
 
-  // Map positioned blocks into CanvasElements
+  // Map positioned blocks into CanvasElements styled by Theme Engine
   for (const posBlock of layoutResult.blocks) {
     const semBlock = semDoc.blocks.find((b) => b.id === posBlock.blockId)
     if (semBlock) {
-      elements.push(semanticBlockToCanvasElement(semBlock, posBlock))
+      elements.push(semanticBlockToCanvasElement(semBlock, posBlock, selectedTheme))
     }
   }
 

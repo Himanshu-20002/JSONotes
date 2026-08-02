@@ -68,6 +68,7 @@ export interface CanvasElement {
   language?: string
   progress?: number
   icon?: string
+  content?: any
 }
 
 export type TemplateId =
@@ -126,6 +127,7 @@ export interface Project {
   height: number
   background: string
   theme: ThemeConfig | string
+  themeId?: string
   layout: LayoutConfig | string
   template: TemplateId | string
   rawContent?: StudyNotesContent

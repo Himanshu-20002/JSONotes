@@ -8,6 +8,7 @@ import {
   analyzeContent,
   recommendLayout,
   getAvailableLayouts,
+  getAvailableThemes,
   compileTemplateStudyNotesV1,
 } from "@/lib/engine"
 import type {
@@ -16,6 +17,7 @@ import type {
   RecommendationResult,
   LayoutId,
   LayoutPreferences,
+  ThemeId,
 } from "@/lib/engine"
 import {
   X,
@@ -101,6 +103,7 @@ export function ImportModal({ onClose }: { onClose: () => void }) {
 
   // Layout selection & User preferences
   const [selectedLayout, setSelectedLayout] = useState<LayoutId>("balanced")
+  const [selectedTheme, setSelectedTheme] = useState<ThemeId>("vibrant")
   const [hasManualSelection, setHasManualSelection] = useState(false)
   const [preferences, setPreferences] = useState<LayoutPreferences>({
     density: "auto",
@@ -166,18 +169,20 @@ export function ImportModal({ onClose }: { onClose: () => void }) {
     }
   }
 
-  // Handle Step 2: Final Generation with Selected Strategy
+  // Handle Step 2: Final Generation with Selected Strategy & Theme
   function handleGenerate() {
     if (!semDoc || !rawParsedData) return
     const content = rawParsedData.content || rawParsedData
-    const compiledBlocks = compileTemplateStudyNotesV1(content, { layout: selectedLayout })
+    const compiledBlocks = compileTemplateStudyNotesV1(content, { layout: selectedLayout, theme: selectedTheme })
 
     importProjectJSON(rawParsedData, compiledBlocks, rawParsedData.template || "study-notes-v1", content)
-    setSuccess(`Successfully generated notes using '${selectedLayout}' layout!`)
+    useEditor.getState().setThemeId(selectedTheme)
+    setSuccess(`Successfully generated notes using '${selectedLayout}' layout & '${selectedTheme}' theme!`)
     setTimeout(onClose, 600)
   }
 
   const availableLayouts = getAvailableLayouts()
+  const availableThemes = getAvailableThemes()
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -345,6 +350,34 @@ export function ImportModal({ onClose }: { onClose: () => void }) {
                     <option value="grid">Structured Card Grid</option>
                   </select>
                 </div>
+              </div>
+            </div>
+
+            {/* Visual Style Theme Swatches */}
+            <div className="mt-4 rounded-xl border border-border bg-black/20 p-3.5">
+              <span className="text-xs font-medium text-foreground">Select Visual Theme:</span>
+              <div className="mt-2.5 grid grid-cols-4 gap-2 text-xs">
+                {availableThemes.map((t) => {
+                  const isSelected = selectedTheme === t.id
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setSelectedTheme(t.id)}
+                      className={`flex flex-col items-center gap-1.5 rounded-lg border p-2 text-center transition-all ${
+                        isSelected
+                          ? "border-primary bg-primary/10 ring-1 ring-primary"
+                          : "border-border bg-muted/20 hover:bg-muted/40"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1">
+                        <span className="size-3.5 rounded-full border border-white/20" style={{ backgroundColor: t.semantic.definition.background }} />
+                        <span className="size-3.5 rounded-full border border-white/20" style={{ backgroundColor: t.semantic.concept.background }} />
+                        <span className="size-3.5 rounded-full border border-white/20" style={{ backgroundColor: t.semantic.code.background }} />
+                      </div>
+                      <span className="text-[11px] font-bold text-foreground">{t.name}</span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
