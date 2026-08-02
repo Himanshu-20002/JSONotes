@@ -13,12 +13,13 @@
 ## ✨ Features
 
 - 🎨 **Freeform Visual Canvas**: Interactive 2560×1440 resolution canvas with pan, zoom, grid snapping, and element layering.
-- 🧠 **Multi-Phase Semantic & 4-Layout Engine**:
+- 🧠 **Multi-Phase Semantic & Layout Engine**:
   - **Phase 1: Semantic Content Layer**: Decouples content understanding from canvas rendering into an intermediate `SemanticDocument`.
   - **Phase 2: Dynamic Block Measurement Engine**: Computes exact card height requirements using text-wrapping, font metrics, line counts, and padding calculations.
   - **Phase 3: Intelligent Balanced Layout Strategy**: Dynamic 1–3 column grid with multi-column feature block spanning ($1482\text{px}$) and collision detection.
   - **Phase 4: Layout Strategy Architecture & Code Focus**: Reusable strategy contract (`LayoutStrategy`) featuring `Balanced` and `Code Focus` layouts (prioritizing $60\%$ code region / $40\%$ explanation columns).
   - **Phase 5: Cheat Sheet & Concept Grid Strategies**: Added `Cheat Sheet` (compact 3-column revision dashboard) and `Concept Grid` (structured 2-column card grid with local row alignment).
+  - **Phase 6: Intelligent Layout Recommendation & Scoring Engine**: Offline, deterministic candidate evaluator scoring strategies by content fit ($45\%$), geometry fit ($35\%$), and readability ($20\%$).
 - ⚡ **Structured Content Import**: Import hand-written JSON or Markdown payloads without needing explicit $x, y$ coordinates.
 - 📤 **Multi-Format High-Res Exports**: Export wallpapers in **PNG**, **JPEG**, **WebP**, **SVG**, or save projects losslessly as `.json`.
 - ⌨️ **UX & Keyboard Productivity**: Full Undo (`Ctrl+Z`), Redo (`Ctrl+Y`), duplicate (`Ctrl+D`), delete (`Del`), layer locking (`Ctrl+L`), and multi-axis transforms.
@@ -52,8 +53,8 @@
                                                   │
                                                   ▼
                                  ┌─────────────────────────────────┐
-                                 │       getLayoutStrategy()       │
-                                 │    (lib/engine/layout/...)      │
+                                 │        recommendLayout()        │
+                                 │ (lib/engine/recommendation/...) │
                                  └─────────────────────────────────┘
                                       /    │       │    \
                                      /     │       │     \
@@ -71,8 +72,8 @@
                                                   │
                                                   ▼
                                  ┌─────────────────────────────────┐
-                                 │          LayoutResult           │
-                                 │ (PositionedBlock[], Metrics)    │
+                                 │      RecommendationResult       │
+                                 │ (Ranked Candidates & Confidence)│
                                  └─────────────────────────────────┘
                                                   │
                                                   ▼
@@ -126,6 +127,14 @@ lib/
 │   │   ├── registry.ts           # Strategy registry supporting 4 layout strategies
 │   │   ├── types.ts              # LayoutStrategy, LayoutId, LayoutMetadata, LayoutContext
 │   │   ├── validation.ts         # Pure collision & bounds validation
+│   │   └── index.ts
+│   ├── recommendation/           # Phase 6: Intelligent Recommendation & Scoring Engine
+│   │   ├── constants.ts          # Score weights & penalty constants
+│   │   ├── content-fit.ts        # Semantic strategy appropriateness evaluator
+│   │   ├── geometry-fit.ts       # Canvas utilization, imbalance, overflow & readability
+│   │   ├── recommend-layout.ts   # Candidate evaluation, tie-breaking & confidence
+│   │   ├── score-candidate.ts    # Scoring pipeline & penalty application
+│   │   ├── types.ts              # ContentProfile, ScoreBreakdown, RecommendationResult
 │   │   └── index.ts
 │   ├── compiler.ts               # Pipeline Orchestrator to CanvasElement[]
 │   └── index.ts                  # Public engine barrel API
@@ -203,12 +212,14 @@ lib/
 Detailed specifications and step-by-step phase walkthroughs are located in the [`docs/`](file:///x:/projects/next.js/wallpaper-notes-editor/docs/) directory:
 - [docs/architecture.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/architecture.md): Overall application architecture & dataflow documentation.
 - [docs/json-conversion.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/json-conversion.md): Input schema field mappings & grid specs.
+- [docs/recommendation-engine.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/recommendation-engine.md): Recommendation Engine architecture & scoring weights.
 - [docs/phases/phase-01-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-01-walkthrough.md): Phase 1 Semantic Layer implementation.
 - [docs/phases/phase-02-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-02-walkthrough.md): Phase 2 Dynamic Block Measurement Engine.
 - [docs/phases/phase-02.5-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-02.5-walkthrough.md): Phase 2.5 Engine Structure Cleanup.
 - [docs/phases/phase-03-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-03-walkthrough.md): Phase 3 Intelligent Balanced Layout Engine.
 - [docs/phases/phase-04-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-04-walkthrough.md): Phase 4 Layout Strategy Architecture & Code Focus.
 - [docs/phases/phase-05-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-05-walkthrough.md): Phase 5 Cheat Sheet & Concept Grid Strategies.
+- [docs/phases/phase-06-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-06-walkthrough.md): Phase 6 Intelligent Recommendation & Scoring Engine.
 
 ---
 
