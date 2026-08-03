@@ -216,23 +216,23 @@ lib/
 
 ## 📚 Technical Documentation
 
-Detailed specifications and step-by-step phase walkthroughs are located in the [`docs/`](file:///x:/projects/next.js/wallpaper-notes-editor/docs/) directory:
-- [docs/architecture.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/architecture.md): Overall application architecture & dataflow documentation.
-- [docs/json-conversion.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/json-conversion.md): Input schema field mappings & grid specs.
-- [docs/recommendation-engine.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/recommendation-engine.md): Recommendation Engine architecture & scoring weights.
-- [docs/recommendation-ui.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/recommendation-ui.md): Recommendation UX workflow & preference model.
-- [docs/theme-engine.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/theme-engine.md): Visual Style & Theme Engine tokens and architecture.
-- [docs/content-discovery.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/content-discovery.md): Content Discovery Engine pipeline & classification math.
-- [docs/phases/phase-01-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-01-walkthrough.md): Phase 1 Semantic Layer implementation.
-- [docs/phases/phase-02-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-02-walkthrough.md): Phase 2 Dynamic Block Measurement Engine.
-- [docs/phases/phase-02.5-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-02.5-walkthrough.md): Phase 2.5 Engine Structure Cleanup.
-- [docs/phases/phase-03-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-03-walkthrough.md): Phase 3 Intelligent Balanced Layout Engine.
-- [docs/phases/phase-04-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-04-walkthrough.md): Phase 4 Layout Strategy Architecture & Code Focus.
-- [docs/phases/phase-05-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-05-walkthrough.md): Phase 5 Cheat Sheet & Concept Grid Strategies.
-- [docs/phases/phase-06-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-06-walkthrough.md): Phase 6 Intelligent Recommendation & Scoring Engine.
-- [docs/phases/phase-07-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-07-walkthrough.md): Phase 7 Recommendation UX & User Layout Preferences.
-- [docs/phases/phase-08-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-08-walkthrough.md): Phase 8 Visual Style & Theme Engine.
-- [docs/phases/phase-09-walkthrough.md](file:///x:/projects/next.js/wallpaper-notes-editor/docs/phases/phase-09-walkthrough.md): Phase 9 Schema-Agnostic Content Discovery Engine.
+Detailed specifications and step-by-step phase walkthroughs are located in the [`docs/`](docs/) directory:
+- [docs/architecture.md](docs/architecture.md): Overall application architecture & dataflow documentation.
+- [docs/json-conversion.md](docs/json-conversion.md): Input schema field mappings & grid specs.
+- [docs/recommendation-engine.md](docs/recommendation-engine.md): Recommendation Engine architecture & scoring weights.
+- [docs/recommendation-ui.md](docs/recommendation-ui.md): Recommendation UX workflow & preference model.
+- [docs/theme-engine.md](docs/theme-engine.md): Visual Style & Theme Engine tokens and architecture.
+- [docs/content-discovery.md](docs/content-discovery.md): Content Discovery Engine pipeline & classification math.
+- [docs/phases/phase-01-walkthrough.md](docs/phases/phase-01-walkthrough.md): Phase 1 Semantic Layer implementation.
+- [docs/phases/phase-02-walkthrough.md](docs/phases/phase-02-walkthrough.md): Phase 2 Dynamic Block Measurement Engine.
+- [docs/phases/phase-02.5-walkthrough.md](docs/phases/phase-02.5-walkthrough.md): Phase 2.5 Engine Structure Cleanup.
+- [docs/phases/phase-03-walkthrough.md](docs/phases/phase-03-walkthrough.md): Phase 3 Intelligent Balanced Layout Engine.
+- [docs/phases/phase-04-walkthrough.md](docs/phases/phase-04-walkthrough.md): Phase 4 Layout Strategy Architecture & Code Focus.
+- [docs/phases/phase-05-walkthrough.md](docs/phases/phase-05-walkthrough.md): Phase 5 Cheat Sheet & Concept Grid Strategies.
+- [docs/phases/phase-06-walkthrough.md](docs/phases/phase-06-walkthrough.md): Phase 6 Intelligent Recommendation & Scoring Engine.
+- [docs/phases/phase-07-walkthrough.md](docs/phases/phase-07-walkthrough.md): Phase 7 Recommendation UX & User Layout Preferences.
+- [docs/phases/phase-08-walkthrough.md](docs/phases/phase-08-walkthrough.md): Phase 8 Visual Style & Theme Engine.
+- [docs/phases/phase-09-walkthrough.md](docs/phases/phase-09-walkthrough.md): Phase 9 Schema-Agnostic Content Discovery Engine.
 
 ---
 
