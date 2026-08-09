@@ -1,0 +1,2107 @@
+# JSONotes — Phase 9: Schema-Agnostic Content Discovery Engine
+
+## Context
+
+JSONotes Phases 1–8 are complete.
+
+Current architecture:
+
+```text
+JSON / Markdown
+      ↓
+Semantic Normalization
+      ↓
+Content Analysis
+      ↓
+Dynamic Measurement
+      ↓
+Layout Strategies
+      ↓
+Layout Recommendation
+      ↓
+User Preferences
+      ↓
+Theme Engine
+      ↓
+CanvasElement[]
+      ↓
+Editable Visual Notes
+```
+
+Current major limitation:
+
+The semantic engine still understands content best when users follow JSONotes-specific field names such as:
+
+```text
+title
+subtitle
+definition
+concepts
+related
+code
+summary
+interview
+warning
+memory
+notes
+```
+
+Real users will provide arbitrary JSON:
+
+```json
+{
+  "topic": "JavaScript Closures",
+  "explanation": "A closure allows a function to retain access to its lexical scope.",
+  "importantPoints": [
+    "Uses lexical scoping",
+    "Outer variables remain available"
+  ],
+  "exampleCode": "const outer = () => { let x = 1; return () => x; };",
+  "thingsToAvoid": [
+    "Retaining unnecessary large objects"
+  ]
+}
+```
+
+JSONotes should understand this without forcing users to rename their fields.
+
+---
+
+# PHASE 9 OBJECTIVE
+
+Build a deterministic:
+
+# Schema-Agnostic Content Discovery Engine
+
+The engine should inspect arbitrary JSON structure and infer useful semantic blocks.
+
+Target architecture:
+
+```text
+Raw JSON
+   ↓
+Known JSONotes Schema Detection
+   ↓
+Known fields processed directly
+   +
+Unknown fields
+   ↓
+Structure Discovery
+   ↓
+Field Signal Extraction
+   ↓
+Semantic Classification
+   ↓
+Confidence Scoring
+   ↓
+Strong Match → Semantic Type
+Weak Match   → Generic Block
+   ↓
+SemanticDocument
+   ↓
+EXISTING PHASE 2–8 PIPELINE
+```
+
+CRITICAL:
+
+Phase 9 MUST NOT use:
+
+* AI
+* LLMs
+* OpenAI
+* Gemini
+* Claude
+* embeddings
+* vector databases
+* network APIs
+* external classification services
+
+Everything must remain:
+
+* local
+* deterministic
+* explainable
+* fast
+* backward compatible
+
+Do NOT install AI SDKs.
+
+---
+
+# 1. FIRST INSPECT EXISTING CODE
+
+Before modifying anything, inspect:
+
+```text
+lib/engine/
+├── semantic/
+├── measurement/
+├── layout/
+├── recommendation/
+├── theme/
+├── compiler.ts
+└── index.ts
+```
+
+Also inspect:
+
+```text
+lib/types.ts
+lib/blocks.ts
+components/editor/block-renderer.tsx
+components/editor/import-modal.tsx
+```
+
+Understand the existing `SemanticBlockType`, `SemanticDocument`, normalization pipeline and generic rendering possibilities.
+
+Do not duplicate functionality already present.
+
+---
+
+# 2. TARGET DIRECTORY STRUCTURE
+
+Extend:
+
+```text
+lib/engine/semantic/
+```
+
+toward:
+
+```text
+semantic/
+├── normalize.ts
+├── analyze.ts
+├── types.ts
+├── index.ts
+│
+└── discovery/
+    ├── types.ts
+    ├── constants.ts
+    ├── key-normalizer.ts
+    ├── flatten.ts
+    ├── field-signals.ts
+    ├── aliases.ts
+    ├── code-detection.ts
+    ├── classify-field.ts
+    ├── discover-blocks.ts
+    └── index.ts
+```
+
+Adapt names if necessary to match the current repository conventions.
+
+Do not restructure unrelated Phase 1–8 modules.
+
+---
+
+# 3. PRESERVE EXISTING SCHEMA
+
+Existing JSONotes JSON MUST continue working.
+
+Example:
+
+```json
+{
+  "title": "Closures",
+  "definition": "A closure retains lexical scope.",
+  "concepts": [
+    "Lexical environment",
+    "Outer variables"
+  ],
+  "warning": "Closures can retain memory."
+}
+```
+
+Existing explicit fields must have higher priority than inference.
+
+Priority:
+
+```text
+Explicit JSONotes field
+        ↓
+Known normalization
+        ↓
+DO NOT infer that same field again
+```
+
+Track consumed fields/paths.
+
+No duplicate blocks.
+
+---
+
+# 4. DISCOVER UNKNOWN FIELDS
+
+After known fields are normalized, inspect remaining JSON.
+
+Create an intermediate representation approximately like:
+
+```ts
+interface DiscoveredField {
+  path: string
+
+  key: string
+
+  normalizedKey: string
+
+  value: unknown
+
+  valueType:
+    | "string"
+    | "number"
+    | "boolean"
+    | "string-array"
+    | "number-array"
+    | "object"
+    | "object-array"
+    | "mixed-array"
+    | "unknown"
+
+  depth: number
+
+  parentKey?: string
+
+  signals: FieldSignals
+}
+```
+
+This representation must contain NO canvas coordinates and NO visual styles.
+
+---
+
+# 5. NESTED JSON SUPPORT
+
+Support JSON such as:
+
+```json
+{
+  "topic": "React Hooks",
+
+  "basics": {
+    "description": "Hooks allow function components to use React features.",
+
+    "keyPoints": [
+      "State",
+      "Effects",
+      "Context"
+    ]
+  },
+
+  "examples": {
+    "snippet": "const [count, setCount] = useState(0);"
+  }
+}
+```
+
+Preserve paths:
+
+```text
+topic
+
+basics.description
+
+basics.keyPoints
+
+examples.snippet
+```
+
+Parent/path context should contribute to classification.
+
+Never output:
+
+```text
+[object Object]
+```
+
+---
+
+# 6. DISCOVERY SAFETY LIMITS
+
+Add centralized limits.
+
+For example:
+
+```ts
+MAX_DISCOVERY_DEPTH = 6
+
+MAX_DISCOVERED_FIELDS = 100
+
+MAX_ARRAY_ITEMS = 50
+```
+
+Use values appropriate for the existing application.
+
+Purpose:
+
+* prevent runaway recursion
+* prevent huge JSON freezing browser
+* prevent stack overflow
+* keep analysis predictable
+
+When limits are reached, fail gracefully.
+
+Do not crash.
+
+---
+
+# 7. KEY NORMALIZATION
+
+Create deterministic key normalization.
+
+These:
+
+```text
+keyPoints
+KeyPoints
+key_points
+key-points
+KEY_POINTS
+Key Points
+```
+
+should produce comparable tokens:
+
+```text
+["key", "points"]
+```
+
+Handle:
+
+* camelCase
+* PascalCase
+* snake_case
+* kebab-case
+* spaces
+* repeated separators
+* capitalization
+
+Examples:
+
+```text
+thingsToAvoid
+→ ["things", "to", "avoid"]
+
+browser_support
+→ ["browser", "support"]
+
+example-code
+→ ["example", "code"]
+
+KEY_TAKEAWAYS
+→ ["key", "takeaways"]
+```
+
+Keep original key too.
+
+---
+
+# 8. HUMANIZE FIELD NAMES
+
+Unknown fields may become generic card titles.
+
+Create:
+
+```text
+humanizeKey()
+```
+
+Examples:
+
+```text
+browserSupport
+→ Browser Support
+
+request_lifecycle
+→ Request Lifecycle
+
+things-to-avoid
+→ Things To Avoid
+
+maxRetries
+→ Max Retries
+```
+
+Do not over-engineer grammar.
+
+---
+
+# 9. FIELD SIGNAL EXTRACTION
+
+Create centralized `FieldSignals`.
+
+Approximately:
+
+```ts
+interface FieldSignals {
+  keyTokens: string[]
+
+  characterCount: number
+
+  wordCount: number
+
+  lineCount: number
+
+  itemCount: number
+
+  averageItemLength: number
+
+  isScalar: boolean
+
+  isListLike: boolean
+
+  isObjectLike: boolean
+
+  looksLikeShortLabel: boolean
+
+  looksLikeSentence: boolean
+
+  looksLikeParagraph: boolean
+
+  containsCodeSyntax: boolean
+
+  codeConfidence: number
+}
+```
+
+Classification should consume these signals.
+
+Do not scatter content analysis logic throughout the codebase.
+
+---
+
+# 10. CENTRAL SEMANTIC ALIAS DICTIONARY
+
+Create:
+
+```text
+aliases.ts
+```
+
+Aliases should act as signals.
+
+## Definition aliases
+
+```text
+definition
+description
+meaning
+overview
+explanation
+intro
+introduction
+about
+what-is
+what
+```
+
+## Concept aliases
+
+```text
+concept
+concepts
+key-point
+key-points
+important-point
+important-points
+principles
+features
+characteristics
+ideas
+fundamentals
+```
+
+## Code aliases
+
+```text
+code
+snippet
+example-code
+sample-code
+implementation
+syntax
+program
+source
+```
+
+## Summary aliases
+
+```text
+summary
+recap
+takeaways
+key-takeaways
+highlights
+revision
+quick-review
+```
+
+## Warning aliases
+
+```text
+warning
+warnings
+pitfall
+pitfalls
+mistake
+mistakes
+caution
+avoid
+things-to-avoid
+common-errors
+```
+
+## Memory aliases
+
+```text
+memory
+mnemonic
+remember
+memory-trick
+tip-to-remember
+```
+
+## Related aliases
+
+```text
+related
+related-topics
+see-also
+references
+connections
+```
+
+## Interview aliases
+
+```text
+interview
+interview-tip
+interview-question
+interview-questions
+question
+questions
+faq
+```
+
+## Notes aliases
+
+```text
+note
+notes
+extra
+additional
+remarks
+additional-notes
+```
+
+Aliases MUST NOT be absolute rules.
+
+---
+
+# 11. CLASSIFICATION TARGETS
+
+Unknown fields may resolve to:
+
+```text
+definition
+concept
+related
+code
+summary
+interview
+warning
+memory
+note
+generic
+```
+
+Title/subtitle discovery should be handled separately where appropriate.
+
+If `generic` does not currently exist in `SemanticBlockType`, add it safely.
+
+---
+
+# 12. GENERIC IS IMPORTANT
+
+Do NOT force uncertain content into an incorrect semantic category.
+
+Example:
+
+```json
+{
+  "browserSupport": "Supported by all modern browsers."
+}
+```
+
+Expected:
+
+```text
+type:
+generic
+
+title:
+Browser Support
+
+content:
+Supported by all modern browsers.
+```
+
+Rule:
+
+> Unknown content should be preserved, not dropped and not falsely classified.
+
+Generic is a successful result.
+
+---
+
+# 13. CLASSIFICATION RESULT
+
+Create approximately:
+
+```ts
+interface FieldClassification {
+  semanticType: SemanticBlockType
+
+  confidence: number
+
+  reasons: string[]
+}
+```
+
+Confidence:
+
+```text
+0.0 → 1.0
+```
+
+Example:
+
+```text
+Field:
+importantPoints
+
+Type:
+concept
+
+Confidence:
+0.92
+
+Reasons:
+- key tokens match concept aliases
+- value is a string array
+- items are short explanatory statements
+```
+
+Keep reasons deterministic.
+
+---
+
+# 14. CLASSIFICATION SCORING
+
+Do not use one giant `if/else`.
+
+Calculate scores for candidate semantic types.
+
+Conceptually:
+
+```text
+Definition Score
+Concept Score
+Code Score
+Summary Score
+Warning Score
+Memory Score
+Interview Score
+Related Score
+Note Score
+```
+
+Signals can add/subtract points.
+
+Example:
+
+```text
+key alias match
++0.55
+
+compatible value shape
++0.20
+
+compatible content length
++0.10
+
+supporting parent-path signal
++0.10
+
+contradictory value shape
+-0.20
+```
+
+Exact numbers can be adjusted during implementation.
+
+Keep scoring centralized and understandable.
+
+---
+
+# 15. CONFIDENCE THRESHOLDS
+
+Centralize thresholds.
+
+Recommended starting behavior:
+
+```text
+confidence >= 0.80
+→ strong semantic match
+
+confidence >= 0.60
+→ acceptable semantic match
+
+confidence < 0.60
+→ generic
+```
+
+Tune if fixtures show better deterministic values.
+
+Do NOT aggressively classify weak matches.
+
+---
+
+# 16. TITLE DISCOVERY
+
+Explicit:
+
+```text
+title
+```
+
+always wins.
+
+Otherwise support conservative title aliases:
+
+```text
+topic
+subject
+heading
+name
+```
+
+Example:
+
+```json
+{
+  "topic": "JavaScript Closures"
+}
+```
+
+should likely produce:
+
+```text
+document.title = "JavaScript Closures"
+```
+
+Requirements:
+
+* preferably top-level
+* scalar string
+* reasonably short
+* strong title alias
+
+Do not simply use the first string in the JSON.
+
+---
+
+# 17. SUBTITLE DISCOVERY
+
+Explicit subtitle wins.
+
+Possible aliases:
+
+```text
+subtitle
+tagline
+subheading
+context
+```
+
+Infer only with reasonable confidence.
+
+Subtitle remains optional.
+
+---
+
+# 18. CODE DETECTION
+
+Code must be detectable even without code-like field names.
+
+Example:
+
+```json
+{
+  "example": "const add = (a, b) => a + b;"
+}
+```
+
+should likely become code.
+
+Build:
+
+```text
+code-detection.ts
+```
+
+Use multiple deterministic signals.
+
+Potential JS/TS indicators:
+
+```text
+const
+let
+var
+function
+=>
+import
+export
+class
+console.
+;
+{}
+()
+```
+
+Potential Python:
+
+```text
+def
+import
+from
+class
+:
+indentation
+```
+
+Potential SQL:
+
+```text
+SELECT
+FROM
+WHERE
+INSERT
+UPDATE
+DELETE
+JOIN
+```
+
+Potential HTML:
+
+```text
+<div>
+<span>
+<section>
+<html>
+```
+
+Potential CSS:
+
+```text
+selector {
+  property: value;
+}
+```
+
+Do not classify based on one symbol alone.
+
+---
+
+# 19. CODE FALSE POSITIVE PROTECTION
+
+This:
+
+```text
+Use {brackets} when describing placeholders.
+```
+
+must NOT become code simply because braces exist.
+
+Require multiple supporting signals.
+
+Code detector should return approximately:
+
+```ts
+interface CodeDetectionResult {
+  isCode: boolean
+  confidence: number
+  language?: string
+  reasons: string[]
+}
+```
+
+---
+
+# 20. LIGHTWEIGHT LANGUAGE HINT
+
+Do not build a sophisticated language classifier.
+
+Only return language when obvious.
+
+Examples:
+
+```text
+const / let / =>
+→ javascript
+
+interface + const / type
+→ typescript
+
+def ...
+→ python
+
+SELECT ... FROM
+→ sql
+
+<div>
+→ html
+
+unknown
+→ text
+```
+
+Existing explicit language metadata always wins.
+
+---
+
+# 21. STRING ARRAYS
+
+Preserve arrays.
+
+Example:
+
+```json
+{
+  "advantages": [
+    "Reusable",
+    "Simple",
+    "Fast"
+  ]
+}
+```
+
+Do NOT convert into one giant string during discovery.
+
+Keep:
+
+```text
+["Reusable", "Simple", "Fast"]
+```
+
+Classification may decide:
+
+```text
+concept
+summary
+generic
+```
+
+depending on signals.
+
+---
+
+# 22. ARRAYS OF OBJECTS
+
+Handle safely.
+
+Example:
+
+```json
+{
+  "algorithms": [
+    {
+      "name": "Bubble Sort",
+      "complexity": "O(n²)"
+    },
+    {
+      "name": "Merge Sort",
+      "complexity": "O(n log n)"
+    }
+  ]
+}
+```
+
+Do NOT:
+
+```text
+String(object)
+```
+
+Do NOT produce `[object Object]`.
+
+For Phase 9 prefer a robust simple representation.
+
+Recommended approach:
+
+Represent the array as ONE structured generic block unless there is an obvious existing semantic representation.
+
+Example:
+
+```text
+Algorithms
+
+Bubble Sort
+Complexity: O(n²)
+
+Merge Sort
+Complexity: O(n log n)
+```
+
+Keep original structured content where possible.
+
+Do not build table rendering yet.
+
+---
+
+# 23. OBJECT VALUES
+
+Example:
+
+```json
+{
+  "performance": {
+    "time": "O(n)",
+    "space": "O(1)"
+  }
+}
+```
+
+Do not discard it.
+
+Either:
+
+* recursively discover meaningful child fields
+
+or
+
+* represent small cohesive objects as structured generic blocks
+
+Choose based on path/depth and existing semantic architecture.
+
+Avoid generating dozens of tiny cards unnecessarily.
+
+---
+
+# 24. NUMBERS
+
+Preserve meaningful numbers.
+
+Example:
+
+```json
+{
+  "maxRetries": 3
+}
+```
+
+Possible generic block:
+
+```text
+Max Retries
+
+3
+```
+
+Do not force number fields into definition/summary/etc.
+
+---
+
+# 25. BOOLEANS
+
+Preserve meaningful booleans.
+
+Example:
+
+```json
+{
+  "supportsSSR": true
+}
+```
+
+Possible generic representation:
+
+```text
+Supports SSR
+
+Yes
+```
+
+or:
+
+```text
+true
+```
+
+Choose one consistent representation.
+
+---
+
+# 26. EMPTY VALUES
+
+Ignore:
+
+```text
+null
+undefined
+""
+[]
+{}
+```
+
+after trimming/checking.
+
+Do not generate empty cards.
+
+---
+
+# 27. CONSUMED PATH TRACKING
+
+Known normalization and generic discovery must cooperate.
+
+Maintain something like:
+
+```ts
+Set<string>
+```
+
+of consumed paths.
+
+Example:
+
+```text
+title
+definition
+concepts
+```
+
+Known normalization marks them consumed.
+
+Discovery skips them.
+
+No duplicate blocks.
+
+---
+
+# 28. SOURCE METADATA
+
+Extend semantic metadata safely.
+
+Approximately:
+
+```ts
+metadata?: {
+  sourceField?: string
+
+  sourcePath?: string
+
+  inferred?: boolean
+
+  inferenceConfidence?: number
+
+  inferenceReasons?: string[]
+
+  language?: string
+
+  itemCount?: number
+
+  codeLines?: number
+}
+```
+
+Do not break existing metadata consumers.
+
+---
+
+# 29. IMPORTANCE
+
+Infer importance conservatively.
+
+Starting guidance:
+
+```text
+definition
+→ 5
+
+code
+→ 5 when substantial, otherwise 4
+
+concept
+→ 4
+
+summary
+→ 4
+
+warning
+→ 4
+
+interview
+→ 3–4
+
+memory
+→ 3
+
+related
+→ 2–3
+
+note
+→ 2–3
+
+generic
+→ 3
+```
+
+Content volume may slightly influence this.
+
+Do not make field position the main signal.
+
+---
+
+# 30. DENSITY
+
+Reuse existing density logic where possible.
+
+Do not create competing definitions of density.
+
+Determine:
+
+```text
+low
+medium
+high
+```
+
+from actual content volume.
+
+---
+
+# 31. PREFERRED SIZE
+
+Use semantic type + content shape.
+
+Examples:
+
+```text
+short generic scalar
+→ small / medium
+
+large definition
+→ medium / large
+
+long code
+→ tall
+
+large summary
+→ wide
+
+large generic list
+→ large
+```
+
+Measurement remains authoritative.
+
+Preferred size is advisory.
+
+---
+
+# 32. ADD GENERIC TO MEASUREMENT
+
+If `generic` is new, extend:
+
+```text
+lib/engine/measurement/
+```
+
+Generic informational text:
+
+→ measure similarly to definition/note.
+
+Generic list:
+
+→ measure similarly to list.
+
+Structured generic object:
+
+→ measure according to normalized display representation.
+
+Do not introduce hardcoded 220px heights.
+
+Use Phase 2 dynamic measurement.
+
+---
+
+# 33. ADD GENERIC TO LAYOUT
+
+All four existing strategies must accept generic blocks:
+
+```text
+balanced
+code-focus
+cheat-sheet
+concept-grid
+```
+
+Generic blocks should have no special layout dominance.
+
+Treat them as normal informational cards.
+
+Do not create a fifth layout.
+
+---
+
+# 34. ADD GENERIC TO RECOMMENDATION
+
+Recommendation should tolerate generic blocks.
+
+Generic-heavy documents should generally favor safe strategies such as:
+
+```text
+balanced
+concept-grid
+```
+
+depending on geometry.
+
+Do not add arbitrary massive score bonuses.
+
+Actual candidate geometry should remain important.
+
+---
+
+# 35. ADD GENERIC TO THEMES
+
+All four themes must support generic blocks:
+
+```text
+vibrant
+minimal
+midnight
+paper
+```
+
+Generic should use a neutral informational semantic style.
+
+Do not make generic bright red/yellow/etc.
+
+---
+
+# 36. ADD GENERIC TO RENDERER
+
+If required, extend:
+
+```text
+block-renderer.tsx
+```
+
+Generic block should support:
+
+```text
+title
+text
+list/structured display
+```
+
+Prefer reusing existing informational card renderer.
+
+Do not create a giant new component unless necessary.
+
+---
+
+# 37. DO NOT CHANGE USER FLOW
+
+Keep:
+
+```text
+Paste JSON
+      ↓
+Analyze
+      ↓
+Recommended Layout
+      ↓
+Theme
+      ↓
+Generate
+```
+
+Phase 9 should improve understanding automatically.
+
+Do NOT add:
+
+```text
+Map your JSON fields
+```
+
+UI.
+
+No schema configuration UI in Phase 9.
+
+---
+
+# 38. UNKNOWN JSON IS NOT INVALID
+
+This is critical.
+
+Valid JSON like:
+
+```json
+{
+  "foo": "Something useful",
+  "bar": ["A", "B"]
+}
+```
+
+must NOT produce:
+
+```text
+Unsupported JSON schema
+```
+
+It should become useful generic visual content.
+
+Valid JSON structure should be accepted whenever meaningful content can be discovered.
+
+---
+
+# 39. TEST FIXTURE — EXISTING SCHEMA
+
+Input:
+
+```json
+{
+  "title": "Closures",
+
+  "definition":
+    "A closure retains access to lexical scope.",
+
+  "concepts": [
+    "Lexical environment",
+    "Outer variables"
+  ],
+
+  "warning":
+    "Closures can retain unnecessary memory."
+}
+```
+
+Expected:
+
+Phase 8 behavior remains effectively unchanged.
+
+No duplicates.
+
+---
+
+# 40. TEST FIXTURE — ARBITRARY SCHEMA
+
+Input:
+
+```json
+{
+  "topic": "JavaScript Closures",
+
+  "explanation":
+    "A closure allows a function to retain access to variables from its lexical scope.",
+
+  "importantPoints": [
+    "Uses lexical scoping",
+    "Outer variables remain available"
+  ],
+
+  "exampleCode":
+    "const outer = () => { let x = 1; return () => x; };",
+
+  "thingsToAvoid": [
+    "Retaining unnecessary large objects"
+  ]
+}
+```
+
+Expected approximately:
+
+```text
+topic
+→ document title
+
+explanation
+→ definition
+
+importantPoints
+→ concept
+
+exampleCode
+→ code
+
+thingsToAvoid
+→ warning
+```
+
+No data silently lost.
+
+---
+
+# 41. TEST FIXTURE — UNKNOWN FIELDS
+
+Input:
+
+```json
+{
+  "topic": "HTTP",
+
+  "browserSupport":
+    "Supported by all modern browsers.",
+
+  "requestLifecycle": [
+    "DNS lookup",
+    "TCP connection",
+    "HTTP request",
+    "HTTP response"
+  ]
+}
+```
+
+Expected:
+
+```text
+HTTP
+→ title
+
+Browser Support
+→ generic informational card
+
+Request Lifecycle
+→ generic/concept list depending confidence
+```
+
+---
+
+# 42. TEST FIXTURE — NESTED
+
+Input:
+
+```json
+{
+  "topic": "React",
+
+  "hooks": {
+    "description":
+      "Hooks allow function components to use React features.",
+
+    "keyPoints": [
+      "State",
+      "Effects",
+      "Context"
+    ]
+  },
+
+  "example": {
+    "snippet":
+      "const [count, setCount] = useState(0);"
+  }
+}
+```
+
+Expected:
+
+```text
+React
+→ title
+
+hooks.description
+→ definition
+
+hooks.keyPoints
+→ concept
+
+example.snippet
+→ code
+```
+
+No `[object Object]`.
+
+---
+
+# 43. TEST FIXTURE — ARRAY OF OBJECTS
+
+Input:
+
+```json
+{
+  "topic": "Sorting",
+
+  "algorithms": [
+    {
+      "name": "Bubble Sort",
+      "complexity": "O(n²)"
+    },
+    {
+      "name": "Merge Sort",
+      "complexity": "O(n log n)"
+    }
+  ]
+}
+```
+
+Expected:
+
+Readable structured content.
+
+No crash.
+
+No data loss.
+
+No `[object Object]`.
+
+---
+
+# 44. TEST FIXTURE — MIXED TYPES
+
+Input:
+
+```json
+{
+  "topic": "Retry Configuration",
+
+  "enabled": true,
+
+  "maxRetries": 3,
+
+  "strategy": "exponential-backoff"
+}
+```
+
+Expected:
+
+Useful generic informational blocks or grouped representation.
+
+No absurd semantic classification.
+
+---
+
+# 45. TEST FIXTURE — EMPTY VALUES
+
+Input:
+
+```json
+{
+  "topic": "Example",
+
+  "description": "",
+
+  "items": [],
+
+  "metadata": {},
+
+  "extra": null
+}
+```
+
+Expected:
+
+Only meaningful content.
+
+No empty cards.
+
+---
+
+# 46. TEST FIXTURE — CODE WITHOUT CODE KEY
+
+Input:
+
+```json
+{
+  "topic": "Arrow Functions",
+
+  "example":
+    "const add = (a, b) => a + b;"
+}
+```
+
+Expected:
+
+Example classified as code with reasonable confidence.
+
+---
+
+# 47. TEST FIXTURE — CODE FALSE POSITIVE
+
+Input:
+
+```json
+{
+  "topic": "Documentation",
+
+  "description":
+    "Use {brackets} when describing placeholders."
+}
+```
+
+Expected:
+
+Description remains prose.
+
+NOT code.
+
+---
+
+# 48. TEST FIXTURE — WEAK SEMANTICS
+
+Input:
+
+```json
+{
+  "topic": "Networking",
+
+  "details":
+    "Some miscellaneous information."
+}
+```
+
+Expected:
+
+```text
+Details
+→ generic
+```
+
+Do not force definition.
+
+---
+
+# 49. TEST DEEP JSON
+
+Generate input deeper than configured maximum.
+
+Expected:
+
+* no stack overflow
+* no crash
+* deterministic truncation
+* useful content discovered within supported depth
+
+---
+
+# 50. TEST LARGE JSON
+
+Generate more than configured field limit.
+
+Expected:
+
+* no browser freeze
+* deterministic handling
+* field limit respected
+
+---
+
+# 51. DOWNSTREAM TEST
+
+Run arbitrary-schema fixture through:
+
+```text
+normalizeContent
+↓
+analyzeContent
+↓
+recommendLayout
+↓
+compile
+```
+
+Then generate with all layouts:
+
+```text
+balanced
+code-focus
+cheat-sheet
+concept-grid
+```
+
+No crashes.
+
+No collisions introduced by semantic discovery itself.
+
+---
+
+# 52. THEME TEST
+
+Render arbitrary-schema fixture with:
+
+```text
+vibrant
+minimal
+midnight
+paper
+```
+
+Generic cards render correctly.
+
+Theme geometry invariance remains intact.
+
+---
+
+# 53. RECOMMENDATION TEST
+
+Code-heavy arbitrary JSON should allow `code-focus` to score strongly.
+
+Concept/list-heavy arbitrary JSON should allow `concept-grid` or `cheat-sheet` to score strongly.
+
+Generic-heavy content should remain safely renderable.
+
+Do not hardcode expected winner if geometry legitimately favors another strategy.
+
+---
+
+# 54. DETERMINISM TEST
+
+Run discovery multiple times against identical input.
+
+Expected:
+
+```text
+same blocks
+same types
+same ordering
+same confidence
+same metadata
+```
+
+IDs may follow existing deterministic/non-deterministic project conventions, but semantic decisions must be deterministic.
+
+---
+
+# 55. DEBUG HELPER
+
+Create a development-only helper capable of exposing:
+
+```text
+Field:
+importantPoints
+
+Path:
+importantPoints
+
+Tokens:
+important / points
+
+Value type:
+string-array
+
+Classification:
+concept
+
+Confidence:
+0.92
+
+Reasons:
+- alias match
+- list-shaped value
+- short explanatory items
+```
+
+Do not expose this in normal production UI.
+
+It should help tune heuristics later.
+
+---
+
+# 56. DOCUMENTATION
+
+Create:
+
+```text
+docs/content-discovery.md
+```
+
+Document:
+
+* purpose
+* architecture
+* known-schema fast path
+* discovery pipeline
+* key normalization
+* field signals
+* aliases
+* semantic scoring
+* confidence thresholds
+* generic fallback
+* code detection
+* nested JSON
+* arrays
+* object arrays
+* safety limits
+* source metadata
+* downstream compatibility
+* known limitations
+
+---
+
+# 57. BUILD VERIFICATION
+
+Run:
+
+```bash
+npx tsc --noEmit
+```
+
+Then:
+
+```bash
+npm run build
+```
+
+Run existing tests/lint if configured.
+
+Do not consider Phase 9 complete if TypeScript/build fails.
+
+---
+
+# PHASE 9 DEFINITION OF DONE
+
+Phase 9 is complete when:
+
+1. Existing JSONotes schema still works.
+2. Arbitrary JSON keys are accepted.
+3. Known fields remain the high-confidence fast path.
+4. Known fields are not processed twice.
+5. Nested JSON is discoverable.
+6. Discovery recursion is bounded.
+7. Total discovered fields are bounded.
+8. Array processing is bounded.
+9. camelCase keys are normalized.
+10. PascalCase keys are normalized.
+11. snake_case keys are normalized.
+12. kebab-case keys are normalized.
+13. Keys can be humanized.
+14. FieldSignals exists.
+15. Semantic aliases are centralized.
+16. Classification considers key semantics.
+17. Classification considers value shape.
+18. Classification considers content.
+19. Classification can consider parent/path context.
+20. Classification confidence exists.
+21. Weak classification becomes generic.
+22. Unknown content is preserved.
+23. Generic SemanticBlock is supported.
+24. Generic measurement works.
+25. Generic layout works.
+26. Generic recommendation works.
+27. Generic themes work.
+28. Generic rendering works.
+29. String arrays remain structured.
+30. Object arrays are handled safely.
+31. Objects do not become `[object Object]`.
+32. Numbers are handled.
+33. Booleans are handled.
+34. Empty values are ignored.
+35. Code detection works without a code field name.
+36. Code false positives are controlled.
+37. Lightweight language hints work.
+38. Explicit language metadata still wins.
+39. Title inference works conservatively.
+40. Subtitle inference works conservatively.
+41. Source path metadata is preserved.
+42. Inference confidence metadata is preserved.
+43. Inference reasons are available.
+44. Importance is assigned.
+45. Density remains compatible.
+46. Preferred size remains compatible.
+47. Existing layouts work.
+48. Existing recommendation engine works.
+49. Existing preference system works.
+50. Existing themes work.
+51. Existing editor/manual editing works.
+52. Existing exports work.
+53. Existing import flow remains unchanged.
+54. Unknown schema is not treated as invalid.
+55. Discovery is deterministic.
+56. Deep JSON cannot crash discovery.
+57. Large JSON cannot freeze discovery under normal limits.
+58. No AI is introduced.
+59. No LLM is introduced.
+60. No network classification API is introduced.
+61. No new AI dependencies are installed.
+62. TypeScript passes.
+63. Production build passes.
+64. Phase 9 architecture is documented.
+
+---
+
+# STRICT NON-GOALS
+
+DO NOT implement:
+
+```text
+AI
+LLMs
+OpenAI
+Gemini
+Claude
+embeddings
+vector search
+automatic rewriting
+automatic summarization
+content generation
+schema-mapping UI
+new layout strategies
+new themes
+authentication
+database
+cloud storage
+sharing
+billing
+collaboration
+```
+
+Phase 9 is ONLY:
+
+> Deterministic schema-agnostic content discovery.
+
+---
+
+# FINAL REPORT
+
+When implementation is complete, provide:
+
+1. Updated semantic directory tree
+2. Files created
+3. Files modified
+4. Discovery architecture
+5. Known-schema fast-path behavior
+6. DiscoveredField model
+7. FieldSignals model
+8. Key normalization behavior
+9. Alias architecture
+10. Classification scoring algorithm
+11. Confidence thresholds
+12. Generic fallback behavior
+13. Nested JSON behavior
+14. Object-array behavior
+15. Number/boolean behavior
+16. Code detection algorithm
+17. Code false-positive protection
+18. Language detection behavior
+19. Source metadata changes
+20. Existing-schema test result
+21. Arbitrary-schema test result
+22. Nested JSON test result
+23. Unknown-field test result
+24. Array-of-objects test result
+25. Code detection test result
+26. False-positive test result
+27. Deep JSON test result
+28. Large JSON test result
+29. Layout compatibility
+30. Recommendation compatibility
+31. Theme compatibility
+32. Editor compatibility
+33. Export compatibility
+34. Determinism result
+35. TypeScript result
+36. Production build result
+37. Known limitations
+
+Then STOP.
+
+DO NOT begin Phase 10.
