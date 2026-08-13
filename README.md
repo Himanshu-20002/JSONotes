@@ -239,3 +239,6 @@ Detailed specifications and step-by-step phase walkthroughs are located in the [
 ## 🛡 License
 
 This project is open-source and available under the [MIT License](LICENSE).
+
+project is open source free to use
+
